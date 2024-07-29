@@ -1,0 +1,14 @@
+[
+  {
+    "AgeGroup": 21,
+    "TimeSpent": "2 to 5"
+  },
+  {
+    "AgeGroup": 21,
+    "TimeSpent": "More than 5"
+  },
+  {
+    "AgeGroup": 21,
+    "TimeSpent": "Less than 5"
+  }
+]

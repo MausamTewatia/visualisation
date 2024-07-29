@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Social Media Usage Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f0f0f0;
+      }
+      #header {
+        background-color: #333;
+        color: white;
+        padding: 10px;
+        text-align: center;
+      }
+      #logo {
+        max-width: 200px;
+        display: block;
+        margin: 10px auto;
+      }
+      #container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        padding: 20px;
+      }
+      .chart {
+        background-color: white;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        margin: 10px;
+        padding: 20px;
+      }
+      .chart-title {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="header">
+      <!-- <img
+        src=""
+        alt=""
+        id="logo"
+      /> -->
+      <h1>Interactive Visualisation</h1>
+      <!-- <h2></h2>
+      <h3></h3> -->
+    </div>
+    <div id="container">
+      <div class="chart">
+        <div class="chart-title">
+          Distribution of Hours Spent on Social Media by Age Groups
+        </div>
+        <div id="histogram"></div>
+      </div>
+      <div class="chart">
+        <div class="chart-title">Age Groups Based on Hours Spent</div>
+        <div id="pieChart"></div>
+      </div>
+      <div class="chart">
+        <div class="chart-title">
+          Time Spent on Social Media Per Day by Age Groups
+        </div>
+        <div id="barChart"></div>
+      </div>
+    </div>
+
+    <script>
+      // Function to load JSON data and create visualizations
+      function loadDataAndVisualize() {
+        d3.json("social_media_data.json")
+          .then(function (data) {
+            createHistogram(data);
+            createPieChart(data);
+            createBarChart(data);
+          })
+          .catch(function (error) {
+            console.log("Error loading the JSON file:", error);
+          });
+      }
+
+      // Histogram
+      function createHistogram(data) {
+        const histogramWidth = 400;
+        const histogramHeight = 300;
+        const histogramMargin = { top: 20, right: 20, bottom: 30, left: 40 };
+
+        const histogramSvg = d3
+          .select("#histogram")
+          .append("svg")
+          .attr("width", histogramWidth)
+          .attr("height", histogramHeight);
+
+        const histogramX = d3
+          .scaleLinear()
+          .domain([0, d3.max(data, (d) => d.AgeGroup)])
+          .range([
+            histogramMargin.left,
+            histogramWidth - histogramMargin.right,
+          ]);
+
+        const histogramBins = d3
+          .histogram()
+          .value((d) => d.AgeGroup)
+          .domain(histogramX.domain())
+          .thresholds(histogramX.ticks(10))(data);
+
+        const histogramY = d3
+          .scaleLinear()
+          .domain([0, d3.max(histogramBins, (d) => d.length)])
+          .range([
+            histogramHeight - histogramMargin.bottom,
+            histogramMargin.top,
+          ]);
+
+        histogramSvg
+          .append("g")
+          .attr(
+            "transform",
+            `translate(0,${histogramHeight - histogramMargin.bottom})`
+          )
+          .call(d3.axisBottom(histogramX));
+
+        histogramSvg
+          .append("g")
+          .attr("transform", `translate(${histogramMargin.left},0)`)
+          .call(d3.axisLeft(histogramY));
+
+        histogramSvg
+          .selectAll("rect")
+          .data(histogramBins)
+          .enter()
+          .append("rect")
+          .attr("x", (d) => histogramX(d.x0) + 1)
+          .attr("width", (d) =>
+            Math.max(0, histogramX(d.x1) - histogramX(d.x0) - 1)
+          )
+          .attr("y", (d) => histogramY(d.length))
+          .attr("height", (d) => histogramY(0) - histogramY(d.length))
+          .attr("fill", "#69b3a2");
+      }
+
+      // Pie Chart
+      function createPieChart(data) {
+        const pieWidth = 400;
+        const pieHeight = 300;
+        const pieRadius = Math.min(pieWidth, pieHeight) / 2;
+
+        const pieSvg = d3
+          .select("#pieChart")
+          .append("svg")
+          .attr("width", pieWidth)
+          .attr("height", pieHeight)
+          .append("g")
+          .attr("transform", `translate(${pieWidth / 2},${pieHeight / 2})`);
+
+        const pieColor = d3
+          .scaleOrdinal()
+          .domain(data.map((d) => d.TimeSpent))
+          .range(d3.schemeCategory10);
+
+        const pie = d3
+          .pie()
+          .value((d) => 1)
+          .sort(null);
+
+        const arc = d3.arc().innerRadius(0).outerRadius(pieRadius);
+
+        const pieArcs = pieSvg
+          .selectAll("arc")
+          .data(pie(data))
+          .enter()
+          .append("g")
+          .attr("class", "arc");
+
+        pieArcs
+          .append("path")
+          .attr("d", arc)
+          .attr("fill", (d) => pieColor(d.data.TimeSpent));
+
+        pieArcs
+          .append("text")
+          .attr("transform", (d) => `translate(${arc.centroid(d)})`)
+          .attr("dy", "0.35em")
+          .text((d) => d.data.TimeSpent)
+          .attr("text-anchor", "middle")
+          .style("font-size", "12px");
+      }
+
+      // Bar Chart
+      function createBarChart(data) {
+        const barWidth = 400;
+        const barHeight = 300;
+        const barMargin = { top: 20, right: 20, bottom: 30, left: 40 };
+
+        const barSvg = d3
+          .select("#barChart")
+          .append("svg")
+          .attr("width", barWidth)
+          .attr("height", barHeight);
+
+        const barX = d3
+          .scaleBand()
+          .range([barMargin.left, barWidth - barMargin.right])
+          .padding(0.1);
+
+        const barY = d3
+          .scaleLinear()
+          .range([barHeight - barMargin.bottom, barMargin.top]);
+
+        barX.domain(data.map((d) => d.AgeGroup));
+        barY.domain([
+          0,
+          d3.max(data, (d) => {
+            if (d.TimeSpent === "Less than 5") return 5;
+            if (d.TimeSpent === "2 to 5") return 5;
+            return 10; // "More than 5"
+          }),
+        ]);
+
+        barSvg
+          .append("g")
+          .attr("transform", `translate(0,${barHeight - barMargin.bottom})`)
+          .call(d3.axisBottom(barX));
+
+        barSvg
+          .append("g")
+          .attr("transform", `translate(${barMargin.left},0)`)
+          .call(d3.axisLeft(barY));
+
+        barSvg
+          .selectAll(".bar")
+          .data(data)
+          .enter()
+          .append("rect")
+          .attr("class", "bar")
+          .attr("x", (d) => barX(d.AgeGroup))
+          .attr("y", (d) => {
+            if (d.TimeSpent === "Less than 5") return barY(2.5);
+            if (d.TimeSpent === "2 to 5") return barY(3.5);
+            return barY(7.5); // "More than 5"
+          })
+          .attr("width", barX.bandwidth())
+          .attr("height", (d) => {
+            if (d.TimeSpent === "Less than 5")
+              return barHeight - barMargin.bottom - barY(2.5);
+            if (d.TimeSpent === "2 to 5")
+              return barHeight - barMargin.bottom - barY(3.5);
+            return barHeight - barMargin.bottom - barY(7.5); // "More than 5"
+          })
+          .attr("fill", "#4CAF50");
+      }
+
+      // Load data and create visualizations when the page loads
+      window.onload = loadDataAndVisualize;
+    </script>
+  </body>
+</html>
